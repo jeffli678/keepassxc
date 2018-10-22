@@ -649,7 +649,19 @@ void DatabaseWidget::openUrlForEntry(Entry* entry)
 
             int result = msgbox.exec();
             if (result == QMessageBox::Yes) {
-                QProcess::startDetached(cmdString.mid(6));
+                // TODO: Move this to a tools function to replace environment variables (Also make compat with *nix $ENV)
+                QRegularExpression regex("(%([^%]+)%)");
+                cmdTruncated = cmdString.mid(6);
+                auto env = QProcessEnvironment::systemEnvironment();
+                auto results = regex.globalMatch(cmdTruncated);
+                while (results.hasNext()) {
+                    auto result = results.next();
+                    if (env.contains(result.captured(2))) {
+                        cmdTruncated.replace(result.captured(1), env.value(result.captured(2)));
+                    }
+                }
+
+                QProcess::startDetached(cmdTruncated);
             }
 
             if (remember) {
